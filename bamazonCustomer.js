@@ -6,45 +6,93 @@ var table = require("cli-table2");
 //have the connection variable connect to mysql database
 var connection = mysql.createConnection({
     host: "localhost",
-    user: "", //left blank
-    password: "", //left blank
+    user: "", //will want to leave blank**
+    password: "", //will want to leave blank**
     database: "bamazon_db", //schema name in mysql
-    port: 3306 
+    port: 3306
 }); 
 
 //calls it 
-connection.connect(); 
+connection.connect(function(err){
+  if (err) throw err;
+});
 
-//displays the data tables 
 var display = function() {
-    connection.query("SELECT * FROM products", function(err, res) {
+  connection.query("SELECT * FROM products", function(err, results) {
       if (err) throw err;
-      console.log("-----------------------------");
-      console.log("      Welcome To Bamazon    ");
-      console.log("-----------------------------");
-      console.log("");
-      console.log("Find below our Products List");
-      console.log("");
-      var table = new Table({
-        head: ["Product Id", "Product Description", "Cost"],
-        colWidths: [12, 50, 8],
-        colAligns: ["center", "left", "right"],
-        style: {
-          head: ["aqua"],
-          compact: true
-        }
+      console.table(results);
+  })
+};
+
+var run = function() {
+  //all products available for purchase in the query database 
+  connection.query("SELECT * FROM products", function(err, results) {
+      if (err) throw err;
+      //prompt the user for which they'd like to purchase, once you have the products
+      inquirer.prompt([
+          {
+              name: "product",
+              type: "list",
+              choices: function() {
+                  var choiceArray = [];
+                  for (var i = 0; i < results.length; i++) {
+                      choiceArray.push(results[i].product_name);
+                  }
+                  return choiceArray;
+              },
+              message: "What are you looking to purchase?"
+          },
+          {
+              name: "amount",
+              type: "input",
+              message: "How many would you like to buy?"
+          }
+      ]).then(function(answer) {
+          var chosenProduct;
+          for (var i = 0; i < results.length; i++) {
+              if (results[i].product_name === answer.product) {
+                  chosenProduct = results[i];
+              }
+          }
+
+          if (chosenProduct.stock_quantity > parseInt(answer.amount)) {
+              connection.query("UPDATE products SET ? WHERE ?", [
+              {
+                  stock_quantity: chosenProduct.stock_quantity - parseInt(answer.amount)
+              },
+              {
+                  id: chosenProduct.id
+              }], function(error) {
+                  if (error) throw err;
+                  console.log("\n\n");
+                  console.log("==============================================");
+                  console.log("Congrats, your product was purchased successfully!");
+                  console.log("==============================================");
+                  console.log("Here's your purchase summary");
+                  console.log("-----------------------------");
+                  console.log("Item Name: " +  chosenProduct.product_name);
+                  console.log("Item Count: " + parseInt(answer.amount));
+                  console.log("-----------------------------");
+                  console.log("Total: " + "$" + (chosenProduct.price * parseInt(answer.amount)));
+                  console.log("==============================================");
+                  console.log("\n\n");
+                  display();
+                  run();
+              })
+          } else {
+              console.log("==============================================");
+              console.log("Insufficient stock.");
+              console.log("==============================================");
+              display();
+              run();
+          }
       });
-      //for loop 
-      for (var i = 0; i < res.length; i++) {
-        table.push([res[i].id, res[i].products_name, res[i].price]);
-      }
-  
-      console.log(table.toString());
-      console.log("");
-      //shopping();
-    }); //End Connection to products
-  };
-  display(); 
+  });
+};
+
+display();
+run();
+
 
 
 
