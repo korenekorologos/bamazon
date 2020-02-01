@@ -18,6 +18,9 @@
   },
   "homepage": "https://github.com/korenekorologos/bamazon#readme",
   "dependencies": {
+    "cli-table2": "^0.2.0",
+    "inquirer": "^7.0.4",
+    "mysql": "^2.18.1",
     "node-modules": "^1.0.1"
   }
 }
